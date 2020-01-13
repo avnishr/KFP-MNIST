@@ -1,2 +1,2 @@
 # KFP-MNIST
-MNIST Demo on KFP
+MNIST Demo on Kubeflow

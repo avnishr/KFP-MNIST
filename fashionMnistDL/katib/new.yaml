@@ -1,0 +1,55 @@
+apiVersion: "kubeflow.org/v1alpha3"
+kind: Experiment
+metadata:
+  namespace: kubeflow-avrastog
+  name: t-mnist
+spec:
+  parallelTrialCount: 3
+  maxTrialCount: 12
+  maxFailedTrialCount: 3
+  objective:
+    type: maximize
+    goal: 0.85
+    objectiveMetricName: accuracy
+  algorithm:
+    algorithmName: random
+  parameters:
+    - name: --batch_size
+      parameterType: int
+      feasibleSpace:
+        min: "512"
+        max: "4196"
+    - name: --learning_rate
+      parameterType: double
+      feasibleSpace:
+        min: "0.002"
+        max: "0.005"        
+  trialTemplate:
+    goTemplate:
+        rawTemplate: |-
+          apiVersion: "kubeflow.org/v1"
+          kind: TFJob
+          metadata:
+            name: {{.Trial}}
+            namespace: {{.NameSpace}}
+          spec:
+           tfReplicaSpecs:
+            Worker:
+              replicas: 1
+              restartPolicy: OnFailure
+              template:
+                spec:
+                  containers:
+                    - name: tensorflow
+                      image: gcr.io/dais-data-dev-txwj/mnist/train:latest
+                      imagePullPolicy: Always
+                      command:
+                        - "python"
+                        - "/train.py"
+                        - "--epochs 1"
+                        - "--save_model 0"
+                        {{- with .HyperParameters}}
+                        {{- range .}}
+                        - "{{.Name}}={{.Value}}"
+                        {{- end}}
+                        {{- end}}        

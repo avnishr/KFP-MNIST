@@ -1,0 +1,26 @@
+steps:
+- name: 'python:3.7-slim'
+  id: RUN-UNIT-TESTS-AND-COVERAGE
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - 'pip install -r train/requirements.txt && coverage run --source=train -m nose2 -v -s test && coverage report train/train.py'
+- name: 'gcr.io/cloud-builders/docker'
+  id: CACHE-DOCKER-IMAGE
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    docker pull gcr.io/$PROJECT_ID/mnist/train:latest || exit 0
+  waitFor:
+  - RUN-UNIT-TESTS-AND-COVERAGE
+- name: 'gcr.io/cloud-builders/docker'
+  id: BUILD-DOCKER-IMAGE
+  args: 
+  - 'build'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/mnist/train:latest'
+  - '--cache-from'
+  - 'gcr.io/$PROJECT_ID/mnist/train:latest'
+  - 'train/'
+images: ['gcr.io/$PROJECT_ID/mnist/train:latest']
